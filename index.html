@@ -90,6 +90,23 @@ footer{color:var(--muted);font-size:.9rem;display:flex;flex-wrap:wrap;gap:4px 18
 .ol-scale-line{background:rgba(249,243,227,.85)}
 .ol-scale-line-inner{border-color:var(--ink);color:var(--ink);font:12px var(--f-mono)}
 
+/* 細節等級切換列（捲動時固定在上方） */
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:2000;background:var(--paper)}
+.levelbar{position:sticky;top:env(safe-area-inset-top,0px);z-index:1500;background:var(--card);border:2px solid var(--ink);border-radius:var(--hand-radius);
+  padding:10px 16px;display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;box-shadow:3px 4px 0 rgba(58,46,36,.18)}
+.lv-title{font-weight:700}
+.lv-btns{display:flex;flex-wrap:wrap;gap:6px}
+.lv-btn{font:inherit;font-size:.95rem;color:var(--ink);background:transparent;border:1.8px solid var(--ink);border-radius:12px 4px 10px 5px;padding:2px 12px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.lv-btn:hover{background:var(--code)}
+.lv-btn[aria-pressed="true"]{background:var(--ink);color:var(--card)}
+.lv-btn:focus-visible{outline:2px dashed var(--route);outline-offset:2px}
+.lv-n{font:600 12px var(--f-mono)}
+#lv-desc{margin:0;flex-basis:100%;color:var(--muted);font-size:.92rem;line-height:1.5}
+.map{isolation:isolate}
+.sk-label em{display:block;font-style:normal;font-weight:400;font-size:12px;color:var(--muted);margin-top:3px}
+.sk-b em{text-align:center}
+.sk-l em{text-align:right}
+
 @media (max-width:520px){.map{height:380px}header h1{font-size:1.85rem}.card{padding:14px}}
 </style>
 </head>
@@ -134,9 +151,15 @@ footer{color:var(--muted);font-size:.9rem;display:flex;flex-wrap:wrap;gap:4px 18
 <header>
   <h1>東京車站手繪地圖</h1>
   <svg id="title-scribble" viewBox="0 0 340 18" aria-hidden="true"></svg>
-  <p>把同一組資料（9 個地點、一條步行路線、500 公尺範圍）用三套免費函式庫畫成手繪風格：底圖泛黃、線條微微抖動、加上紙張顆粒，標記用 Rough.js 畫成鉛筆塗鴉。點標記可看地點名稱。</p>
+  <p>把同一組資料（9 個地點、一條步行路線、500 公尺範圍）用三套免費函式庫畫成手繪風格：底圖泛黃、線條微微抖動、加上紙張顆粒，標記用 Rough.js 畫成鉛筆塗鴉。點標記可看地點名稱，用上方的「細節等級」切換 1～5 級。</p>
   <div class="meta"><span>中心 35.6812°N 139.7671°E</span><span>範圍半徑 500 m</span><a href="classic.html">← 看原本的一般版</a></div>
 </header>
+
+<nav class="levelbar" aria-label="細節等級">
+  <span class="lv-title">細節等級</span>
+  <div class="lv-btns" id="lv-btns"></div>
+  <p id="lv-desc" aria-live="polite"></p>
+</nav>
 
 <div class="legend" aria-label="圖例">
   <span data-legend="transit">車站・交通（交叉線）</span>
@@ -149,7 +172,7 @@ footer{color:var(--muted);font-size:.9rem;display:flex;flex-wrap:wrap;gap:4px 18
 <section class="card">
   <div class="card-head">
     <h2>① Leaflet</h2><span class="tag">點陣圖磚 + CSS 濾鏡</span>
-    <p>OSM 圖磚套上「泛黃 + 抖動 + 紙紋」濾鏡；路線所在的圖層只加抖動，標記和文字保持清楚。點一下地圖後才能用滾輪縮放。</p>
+    <p>點陣圖磚套上「泛黃 + 抖動 + 紙紋」濾鏡；路線所在的圖層只加抖動，標記和文字保持清楚。點一下地圖後才能用滾輪縮放。</p>
   </div>
   <div id="map-leaflet" class="map" role="region" aria-label="Leaflet 手繪地圖"></div>
   <details><summary>手繪關鍵程式碼</summary>
@@ -209,6 +232,19 @@ new ol.style.Style({
 
 <div class="tbl">
 <table>
+  <thead><tr><th>等級</th><th>Leaflet／OpenLayers 底圖（點陣）</th><th>MapLibre 底圖（向量）</th><th>地點與圖層</th></tr></thead>
+  <tbody>
+    <tr><td>1 草圖</td><td>不放底圖，只有紙張</td><td>只有紙張和水域</td><td>東京車站、皇居外苑、步行路線</td></tr>
+    <tr><td>2 簡圖</td><td>CARTO Light（無文字）</td><td>加公園、主要道路、鐵路</td><td>5 個地點＋500 m 範圍</td></tr>
+    <tr><td>3 標準</td><td>CARTO Voyager（無文字）</td><td>加所有道路、建築、地名</td><td>9 個地點全部</td></tr>
+    <tr><td>4 詳細</td><td>CARTO Voyager（有文字）</td><td>加路名、3D 建築、傾斜視角</td><td>同上</td></tr>
+    <tr><td>5 完整</td><td>OpenStreetMap 標準圖</td><td>加商店圖示、門牌號碼</td><td>地名附日文</td></tr>
+  </tbody>
+</table>
+</div>
+
+<div class="tbl">
+<table>
   <thead><tr><th>手繪做法</th><th>Leaflet</th><th>MapLibre GL JS</th><th>OpenLayers</th></tr></thead>
   <tbody>
     <tr><td>底圖變色</td><td>CSS <code>sepia</code> 濾鏡</td><td>逐層改 paint 顏色</td><td>CSS <code>sepia</code> 濾鏡</td></tr>
@@ -221,7 +257,7 @@ new ol.style.Style({
 </div>
 
 <footer>
-  <span>底圖資料 © OpenStreetMap 貢獻者；MapLibre 底圖樣式來自 OpenFreeMap；手繪筆觸使用 Rough.js。</span>
+  <span>底圖資料 © OpenStreetMap 貢獻者、© CARTO；MapLibre 底圖樣式來自 OpenFreeMap；手繪筆觸使用 Rough.js。</span>
   <span>手繪濾鏡建議用 Chrome、Edge 或 Firefox 開啟；Safari 可能比較慢。</span>
 </footer>
 </div>
@@ -237,21 +273,53 @@ const INK = '#3a2e24', CARD = '#f9f3e3';
 const COL = { transit:'#2f5d8a', sight:'#3f7a3a', shop:'#b5602a', route:'#b23a48', ring:'#6a4c93' };
 const FILL = { transit:'cross-hatch', sight:'hachure', shop:'zigzag' };
 const CAT_NAME = { transit:'車站・交通', sight:'景點', shop:'購物・商場' };
+// rank：1 = 最重要（草圖就會出現），3 = 標準等級才出現
 const PLACES = [
-  { name:'東京車站 丸之內站舍', short:'東京車站', jp:'東京駅 丸の内駅舎', cat:'transit', lng:139.7671, lat:35.6812, dir:'r' },
-  { name:'大手町站',           short:'大手町站', jp:'大手町駅',         cat:'transit', lng:139.7640, lat:35.6862, dir:'r' },
-  { name:'皇居外苑',           short:'皇居外苑', jp:'皇居外苑',         cat:'sight',   lng:139.7573, lat:35.6800, dir:'b' },
-  { name:'行幸通',             short:'行幸通',   jp:'行幸通り',         cat:'sight',   lng:139.7628, lat:35.6815, dir:'l' },
-  { name:'日本橋',             short:'日本橋',   jp:'日本橋',           cat:'sight',   lng:139.7745, lat:35.6840, dir:'r' },
-  { name:'KITTE 丸之內',       short:'KITTE',    jp:'KITTE丸の内',      cat:'shop',    lng:139.7649, lat:35.6795, dir:'l' },
-  { name:'丸大樓',             short:'丸大樓',   jp:'丸ビル',           cat:'shop',    lng:139.7640, lat:35.6813, dir:'b' },
-  { name:'東京車站一番街',      short:'一番街',   jp:'東京駅一番街',      cat:'shop',    lng:139.7695, lat:35.6800, dir:'r' },
-  { name:'銀座四丁目路口',      short:'銀座四丁目', jp:'銀座四丁目交差点', cat:'shop',    lng:139.7650, lat:35.6717, dir:'r' }
+  { name:'東京車站 丸之內站舍', short:'東京車站', jp:'東京駅',       cat:'transit', lng:139.7671, lat:35.6812, dir:'r', rank:1 },
+  { name:'大手町站',           short:'大手町站', jp:'大手町駅',     cat:'transit', lng:139.7640, lat:35.6862, dir:'r', rank:2 },
+  { name:'皇居外苑',           short:'皇居外苑', jp:'皇居外苑',     cat:'sight',   lng:139.7573, lat:35.6800, dir:'b', rank:1 },
+  { name:'行幸通',             short:'行幸通',   jp:'行幸通り',     cat:'sight',   lng:139.7628, lat:35.6815, dir:'l', rank:3 },
+  { name:'日本橋',             short:'日本橋',   jp:'日本橋',       cat:'sight',   lng:139.7745, lat:35.6840, dir:'r', rank:2 },
+  { name:'KITTE 丸之內',       short:'KITTE',    jp:'KITTE丸の内',  cat:'shop',    lng:139.7649, lat:35.6795, dir:'l', rank:3 },
+  { name:'丸大樓',             short:'丸大樓',   jp:'丸ビル',       cat:'shop',    lng:139.7640, lat:35.6813, dir:'b', rank:3 },
+  { name:'東京車站一番街',      short:'一番街',   jp:'東京駅一番街',  cat:'shop',    lng:139.7695, lat:35.6800, dir:'r', rank:3 },
+  { name:'銀座四丁目路口',      short:'銀座四丁目', jp:'銀座四丁目交差点', cat:'shop', lng:139.7650, lat:35.6717, dir:'r', rank:2 }
 ];
 const ROUTE = [[139.7671,35.6812],[139.7652,35.6814],[139.7628,35.6815],[139.7600,35.6812],[139.7573,35.6800]];
 const RADIUS = 500;
 const NS = 'http://www.w3.org/2000/svg';
 const popupHtml = p => `<div class="pop"><b>${p.name}</b><small>${p.jp}｜${CAT_NAME[p.cat]}</small></div>`;
+
+// ---------- 細節等級 ----------
+const LEVELS = [
+  { n:1, name:'草圖', desc:'只有紙張、2 個主要地點和步行路線，像手繪的示意圖。' },
+  { n:2, name:'簡圖', desc:'加上水域、公園、主要道路和鐵路，地點增加到 5 個，並顯示 500 m 範圍。' },
+  { n:3, name:'標準', desc:'加上所有道路、建築輪廓和地名，9 個地點全部顯示。' },
+  { n:4, name:'詳細', desc:'加上路名；MapLibre 那張會傾斜視角並顯示 3D 建築。' },
+  { n:5, name:'完整', desc:'底圖所有細節（商店、門牌號碼），地點名稱旁邊附上日文。' }
+];
+let level = 3;
+try { const s = Number(localStorage.getItem('sketch-level')); if (s >= 1 && s <= 5) level = s; } catch (e) {}
+const levelListeners = [];
+const placesFor = lv => PLACES.map((p, i) => ({ p, i })).filter(({ p }) => p.rank <= Math.min(lv, 3));
+
+function setLevel(n){
+  level = n;
+  document.querySelectorAll('.lv-btn').forEach(b => b.setAttribute('aria-pressed', String(Number(b.dataset.lv) === n)));
+  document.getElementById('lv-desc').textContent = `第 ${n} 級「${LEVELS[n - 1].name}」：${LEVELS[n - 1].desc}`;
+  levelListeners.forEach(f => { try { f(n); } catch (e) { console.error(e); } });
+  try { localStorage.setItem('sketch-level', String(n)); } catch (e) {}
+}
+(function(){
+  const box = document.getElementById('lv-btns');
+  LEVELS.forEach(L => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'lv-btn'; b.dataset.lv = L.n; b.id = 'lv-' + L.n;
+    b.innerHTML = `<span class="lv-n">${L.n}</span>${L.name}`;
+    b.addEventListener('click', () => setLevel(L.n));
+    box.appendChild(b);
+  });
+})();
 
 // 固定亂數：每次開頁的筆觸都一樣
 const jitter = (i, k) => Math.sin(i * 12.9898 + k * 78.233) * 0.00004;
@@ -273,7 +341,8 @@ function roughPin(cat, seed){
   }));
   return s.outerHTML;
 }
-const pinHtml = (p, i) => `${roughPin(p.cat, i * 7 + 3)}<span class="sk-label sk-${p.dir}">${p.short}</span>`;
+const pinHtml = (p, i, lv) =>
+  `${roughPin(p.cat, i * 7 + 3)}<span class="sk-label sk-${p.dir}">${p.short}${lv >= 5 ? `<em>${p.jp}</em>` : ''}</span>`;
 
 // 標題底下的手繪底線
 (function(){
@@ -308,27 +377,43 @@ function circlePolygon([lng, lat], r, seed = 0, n = 90){
   return pts;
 }
 
+// 點陣底圖：每一級用不同細節的圖磚（第 1 級不放底圖）
+const ATTR_OSM = '&copy; OpenStreetMap contributors';
+const ATTR_CARTO = '&copy; OpenStreetMap contributors &copy; CARTO';
+const RASTER = {
+  2: { url: 'https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}.png', attr: ATTR_CARTO },
+  3: { url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}.png', attr: ATTR_CARTO },
+  4: { url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png', attr: ATTR_CARTO },
+  5: { url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', attr: ATTR_OSM }
+};
+
 // ---------- ① Leaflet ----------
 (function(){
   const map = L.map('map-leaflet', { scrollWheelZoom:false, zoomSnap:0.5 }).setView([CENTER[1], CENTER[0]], 15.5);
-  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 19, attribution: '&copy; OpenStreetMap contributors'
-  }).addTo(map);
+  const tiles = {};
+  let current = null;
+  const tileFor = lv => tiles[lv] || (tiles[lv] = L.tileLayer(RASTER[lv].url, { subdomains: 'abcd', maxZoom: 19, attribution: RASTER[lv].attr }));
 
   const ring = L.layerGroup([
     L.circle([CENTER[1], CENTER[0]], { radius: RADIUS, color: COL.ring, weight: 2.2, dashArray: '10 7', fillColor: COL.ring, fillOpacity: 0.07 }),
     L.circle([CENTER[1] + 0.00004, CENTER[0] - 0.00005], { radius: RADIUS + 10, color: COL.ring, weight: 1.1, opacity: 0.55, fill: false })
-  ]).addTo(map);
-  const route = L.layerGroup([
+  ]);
+  L.layerGroup([
     L.polyline(ROUTE.map(([x, y]) => [y, x]), { color: COL.route, weight: 3.6, dashArray: '12 8', lineCap: 'round' }),
     L.polyline(ROUTE_SKETCH.map(([x, y]) => [y, x]), { color: COL.route, weight: 1.3, opacity: 0.55 })
   ]).addTo(map);
-  const pins = L.layerGroup(PLACES.map((p, i) => L.marker([p.lat, p.lng], {
-    icon: L.divIcon({ className: 'sk-pin', html: pinHtml(p, i), iconSize: [30, 30], iconAnchor: [15, 15], popupAnchor: [0, -14] }),
-    title: p.name
-  }).bindPopup(popupHtml(p)))).addTo(map);
+  const pins = L.layerGroup().addTo(map);
 
-  L.control.layers(null, { '地點': pins, '步行路線': route, '500 m 範圍': ring }, { collapsed: false }).addTo(map);
+  levelListeners.push(lv => {
+    if (current) map.removeLayer(current);
+    current = lv >= 2 ? tileFor(lv).addTo(map) : null;
+    if (lv >= 2) ring.addTo(map); else map.removeLayer(ring);
+    pins.clearLayers();
+    placesFor(lv).forEach(({ p, i }) => L.marker([p.lat, p.lng], {
+      icon: L.divIcon({ className: 'sk-pin', html: pinHtml(p, i, lv), iconSize: [30, 30], iconAnchor: [15, 15], popupAnchor: [0, -14] }),
+      title: p.name
+    }).bindPopup(popupHtml(p)).addTo(pins));
+  });
   map.on('click', () => map.scrollWheelZoom.enable());
 })();
 
@@ -336,12 +421,13 @@ function circlePolygon([lng, lat], r, seed = 0, n = 90){
 (function(){
   const P = { paper:'#efe5cc', paper2:'#e8dcbd', water:'#9cc3cf', waterLine:'#6f9fb0', green:'#c3d49c',
               bldg:'#e0cca2', road:'#fbf6ea', roadCase:'#7a6550', rail:'#5d4a3a', border:'#8a6d55' };
+  const OWN = /^(ring|route)/;
 
   function paperize(map){
     for (const l of map.getStyle().layers){
       const id = l.id;
+      if (OWN.test(id)) continue;
       const set = (k, v) => { try { map.setPaintProperty(id, k, v); } catch (e) {} };
-      if (l.type === 'symbol' && /poi|shield|aeroway|housenumber/.test(id)){ map.setLayoutProperty(id, 'visibility', 'none'); continue; }
       switch (l.type){
         case 'background': set('background-color', P.paper); break;
         case 'fill':
@@ -369,13 +455,55 @@ function circlePolygon([lng, lat], r, seed = 0, n = 90){
     }
   }
 
+  // 依圖層名稱決定「從第幾級開始顯示」
+  function minLevel(l){
+    const id = l.id, t = l.type;
+    if (t === 'background') return 1;
+    if (t === 'symbol'){
+      if (/poi|housenumber|shield|aeroway/.test(id)) return 5;
+      if (/highway|road|street|transport/.test(id)) return 4;
+      return 3;
+    }
+    if (/water|ocean|river/.test(id)) return t === 'line' ? 2 : 1;
+    if (t === 'fill-extrusion') return 4;
+    if (/building/.test(id)) return 3;
+    if (/park|grass|wood|forest|green|garden|cemetery|pitch/.test(id)) return 2;
+    if (t === 'line'){
+      if (/rail|transit/.test(id)) return 2;
+      if (/motorway|trunk|primary|major/.test(id)) return 2;
+    }
+    return 3;
+  }
+
   const map = new maplibregl.Map({
     container: 'map-maplibre',
     style: 'https://tiles.openfreemap.org/styles/liberty',
-    center: CENTER, zoom: 15.5, pitch: 45, bearing: -18,
+    center: CENTER, zoom: 15.5, pitch: level >= 4 ? 45 : 0, bearing: level >= 4 ? -18 : 0,
     cooperativeGestures: true
   });
   map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'top-right');
+
+  let ready = false;
+  const minLv = {};
+  let markers = [];
+
+  function apply(lv, animate){
+    markers.forEach(m => m.remove());
+    markers = placesFor(lv).map(({ p, i }) => {
+      const el = document.createElement('div');
+      el.className = 'sk-pin';
+      el.title = p.name;
+      el.innerHTML = pinHtml(p, i, lv);
+      return new maplibregl.Marker({ element: el, anchor: 'center' })
+        .setLngLat([p.lng, p.lat])
+        .setPopup(new maplibregl.Popup({ offset: 16 }).setHTML(popupHtml(p)))
+        .addTo(map);
+    });
+    if (!ready) return;
+    for (const id in minLv) map.setLayoutProperty(id, 'visibility', lv >= minLv[id] ? 'visible' : 'none');
+    ['ring-fill', 'ring-line', 'ring-line2'].forEach(id => map.setLayoutProperty(id, 'visibility', lv >= 2 ? 'visible' : 'none'));
+    if (animate) map.easeTo(lv >= 4 ? { pitch: 45, bearing: -18, duration: 800 } : { pitch: 0, bearing: 0, duration: 800 });
+  }
 
   map.on('load', () => {
     const hasExtrusion = map.getStyle().layers.some(l => l.type === 'fill-extrusion');
@@ -391,6 +519,10 @@ function circlePolygon([lng, lat], r, seed = 0, n = 90){
       });
     }
     paperize(map);
+    for (const l of map.getStyle().layers){
+      if (l.layout && l.layout.visibility === 'none') continue;   // 原本就隱藏的圖層維持隱藏
+      minLv[l.id] = minLevel(l);
+    }
 
     map.addSource('ring', { type: 'geojson', data: { type: 'FeatureCollection', features: [
       { type: 'Feature', properties: { k: 0 }, geometry: { type: 'Polygon', coordinates: [circlePolygon(CENTER, RADIUS, 0)] } },
@@ -406,18 +538,12 @@ function circlePolygon([lng, lat], r, seed = 0, n = 90){
     ] } });
     map.addLayer({ id: 'route', type: 'line', source: 'route', filter: ['==', ['get', 'k'], 0], layout: { 'line-cap': 'round' }, paint: { 'line-color': COL.route, 'line-width': 3.6, 'line-dasharray': [2.5, 1.6] } });
     map.addLayer({ id: 'route2', type: 'line', source: 'route', filter: ['==', ['get', 'k'], 1], paint: { 'line-color': COL.route, 'line-width': 1.3, 'line-opacity': 0.55 } });
+
+    ready = true;
+    apply(level, false);
   });
 
-  PLACES.forEach((p, i) => {
-    const el = document.createElement('div');
-    el.className = 'sk-pin';
-    el.title = p.name;
-    el.innerHTML = pinHtml(p, i);
-    new maplibregl.Marker({ element: el, anchor: 'center' })
-      .setLngLat([p.lng, p.lat])
-      .setPopup(new maplibregl.Popup({ offset: 16 }).setHTML(popupHtml(p)))
-      .addTo(map);
-  });
+  levelListeners.push(lv => apply(lv, true));
 })();
 
 // ---------- ③ OpenLayers ----------
@@ -425,22 +551,17 @@ function circlePolygon([lng, lat], r, seed = 0, n = 90){
   const proj = c => ol.proj.fromLonLat(c);
   const scale = 1 / Math.cos(CENTER[1] * Math.PI / 180);   // 網頁麥卡托的距離放大倍率
 
-  const pinStyle = (p, i) => new ol.style.Style({
+  const pinStyle = (p, i, lv) => new ol.style.Style({
     image: new ol.style.Icon({ src: 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(roughPin(p.cat, i * 7 + 3)) }),
     text: new ol.style.Text({
-      text: p.short,
+      text: lv >= 5 ? `${p.short}\n${p.jp}` : p.short,
       font: '700 15px "LXGW WenKai TC", serif',
       fill: new ol.style.Fill({ color: INK }),
       stroke: new ol.style.Stroke({ color: CARD, width: 4 }),
       textAlign: p.dir === 'r' ? 'left' : p.dir === 'l' ? 'right' : 'center',
       offsetX: p.dir === 'r' ? 18 : p.dir === 'l' ? -18 : 0,
-      offsetY: p.dir === 'b' ? 24 : 1
+      offsetY: p.dir === 'b' ? (lv >= 5 ? 34 : 24) : 1
     })
-  });
-  const pointFeatures = PLACES.map((p, i) => {
-    const f = new ol.Feature({ geometry: new ol.geom.Point(proj([p.lng, p.lat])), place: p });
-    f.setStyle(pinStyle(p, i));
-    return f;
   });
 
   const ring1 = new ol.Feature(new ol.geom.Circle(proj(CENTER), RADIUS * scale));
@@ -455,7 +576,16 @@ function circlePolygon([lng, lat], r, seed = 0, n = 90){
   const route2 = new ol.Feature(new ol.geom.LineString(ROUTE_SKETCH.map(proj)));
   route2.setStyle(new ol.style.Style({ stroke: new ol.style.Stroke({ color: 'rgba(178,58,72,0.55)', width: 1.3 }) }));
 
-  const pinLayer = new ol.layer.Vector({ source: new ol.source.Vector({ features: pointFeatures }), className: 'ol-pins' });
+  const sources = {};
+  const sourceFor = lv => sources[lv] || (sources[lv] = lv === 5
+    ? new ol.source.OSM()
+    : new ol.source.XYZ({ url: RASTER[lv].url.replace('{s}', '{a-d}'), attributions: RASTER[lv].attr, maxZoom: 19 }));
+
+  const tileLayer = new ol.layer.Tile({ className: 'ol-paper', visible: false });
+  const ringLayer = new ol.layer.Vector({ source: new ol.source.Vector({ features: [ring1, ring2] }), className: 'ol-ink' });
+  const routeLayer = new ol.layer.Vector({ source: new ol.source.Vector({ features: [route1, route2] }), className: 'ol-ink' });
+  const pinSource = new ol.source.Vector();
+  const pinLayer = new ol.layer.Vector({ source: pinSource, className: 'ol-pins' });
 
   const popEl = document.createElement('div');
   popEl.className = 'ol-popup';
@@ -464,17 +594,26 @@ function circlePolygon([lng, lat], r, seed = 0, n = 90){
 
   const map = new ol.Map({
     target: 'map-ol',
-    layers: [
-      new ol.layer.Tile({ source: new ol.source.OSM(), className: 'ol-paper' }),
-      new ol.layer.Vector({ source: new ol.source.Vector({ features: [ring1, ring2, route1, route2] }), className: 'ol-ink' }),
-      pinLayer
-    ],
+    layers: [tileLayer, ringLayer, routeLayer, pinLayer],
     overlays: [overlay],
     view: new ol.View({ center: proj(CENTER), zoom: 15.5 }),
     interactions: ol.interaction.defaults.defaults({ mouseWheelZoom: false })
   });
   map.addInteraction(new ol.interaction.MouseWheelZoom({ condition: ol.events.condition.platformModifierKeyOnly }));
   map.addControl(new ol.control.ScaleLine());
+
+  levelListeners.push(lv => {
+    if (lv >= 2){ tileLayer.setSource(sourceFor(lv)); tileLayer.setVisible(true); }
+    else tileLayer.setVisible(false);
+    ringLayer.setVisible(lv >= 2);
+    pinSource.clear();
+    pinSource.addFeatures(placesFor(lv).map(({ p, i }) => {
+      const f = new ol.Feature({ geometry: new ol.geom.Point(proj([p.lng, p.lat])), place: p });
+      f.setStyle(pinStyle(p, i, lv));
+      return f;
+    }));
+    popEl.hidden = true;
+  });
 
   // 手寫字型載入完成後重畫，避免畫布先用預設字型
   if (document.fonts && document.fonts.load){
@@ -496,6 +635,8 @@ function circlePolygon([lng, lat], r, seed = 0, n = 90){
     map.getTargetElement().style.cursor = hit ? 'pointer' : '';
   });
 })();
+
+setLevel(level);
 </script>
 </body>
 </html>
